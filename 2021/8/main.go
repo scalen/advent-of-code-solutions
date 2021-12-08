@@ -52,6 +52,69 @@ func (set RuneSet) Subtract(other RuneSet) (diff RuneSet) {
 	return
 }
 
+func (set RuneSet) Intersect(other RuneSet) (intersection RuneSet) {
+	intersection = make(RuneSet)
+	for r, _ := range set {
+		if _, present := other[r]; present {
+			intersection[r] = member
+		}
+	}
+	return
+}
+
+func (set RuneSet) Union(other RuneSet) (union RuneSet) {
+	union = make(RuneSet, len(set))
+	for r, _ := range set {
+		union[r] = member
+	}
+	for r, _ := range other {
+		union[r] = member
+	}
+	return
+}
+
+func partTwoBenLomax(segmentReports <-chan string, solutions chan<- string) {
+	var total uint
+	for report := range segmentReports {
+		parts := strings.Split(report, "|")
+		allSegments := NewRuneSet(strings.Replace(parts[0], " ", "", -1))
+		outputSegments := strings.Fields(parts[1])
+
+		setsByNo := make(map[uint]RuneSet)
+		i069, i235 := allSegments, allSegments
+		for _, segments := range strings.Fields(parts[0]) {
+			segmentMap := NewRuneSet(segments)
+			switch len(segments) {
+			case 2: setsByNo[1] = segmentMap
+			case 3: setsByNo[7] = segmentMap
+			case 4: setsByNo[4] = segmentMap
+			case 5: i235 = i235.Intersect(segmentMap)
+			case 6: i069 = i069.Intersect(segmentMap)
+			case 7: setsByNo[8] = segmentMap
+			}
+		}
+		setsByNo[0] = setsByNo[8].Subtract(i235).Union(i069)
+		setsByNo[2] = setsByNo[8].Subtract(i069).Union(i235)
+		setsByNo[3] = setsByNo[1].Union(i235)
+		setsByNo[5] = i069.Union(i235)
+		setsByNo[6] = setsByNo[8].Subtract(setsByNo[1]).Union(i069)
+		setsByNo[9] = setsByNo[4].Union(i069)
+
+		for i, multiplier := 0, uint(math.Pow(10, float64(len(outputSegments)-1))); i < len(outputSegments); i, multiplier = i+1, multiplier/10 {
+			segmentSet := NewRuneSet(outputSegments[i])
+			for digit, set := range setsByNo {
+				if set.IsEqual(segmentSet) {
+					total += digit * multiplier
+					break
+				}
+			}
+		}
+	}
+
+	solutions <- fmt.Sprintf("Total of Outputs, by Ben Lomax: %d", total)
+	close(solutions)
+}
+
 func CategoriseSegments(segments string, segmentsInNumbers map[uint]RuneSet) (err error) {
 	segmentSet := NewRuneSet(segments)
 	switch len(segmentSet) {
@@ -165,6 +228,7 @@ func main() {
 	parts := []func(<-chan string, chan<- string) {
 		partOne,
 		partTwo,
+		partTwoBenLomax,
 	}
 
 	instructionsChannels := make([]chan string, len(parts))
