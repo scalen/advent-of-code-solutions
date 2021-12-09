@@ -7,11 +7,13 @@ import (
 	"log"
 	"math"
 	"os"
+	"sort"
 	"strings"
 )
 
 type void struct{}
 type RuneSet map[rune]void
+type FrozenRuneSet [7]int
 var member void
 
 func NewRuneSet(str string) (set RuneSet) {
@@ -19,6 +21,16 @@ func NewRuneSet(str string) (set RuneSet) {
 	for _, r := range []rune(str) {
 		set[r] = member
 	}
+	return
+}
+
+func (set RuneSet) Freeze() (frozen FrozenRuneSet) {
+	var index uint8
+	for r := range set {
+		frozen[index] = int(r)
+		index++
+	}
+	sort.Ints(frozen[:])
 	return
 }
 
@@ -100,14 +112,12 @@ func partTwoBenLomax(segmentReports <-chan string, solutions chan<- string) {
 		setsByNo[6] = setsByNo[8].Subtract(setsByNo[1]).Union(i069)
 		setsByNo[9] = setsByNo[4].Union(i069)
 
+		noBySet := make(map[FrozenRuneSet]uint, len(setsByNo))
+		for digit, set := range setsByNo {
+			noBySet[set.Freeze()] = digit
+		}
 		for i, multiplier := 0, uint(math.Pow(10, float64(len(outputSegments)-1))); i < len(outputSegments); i, multiplier = i+1, multiplier/10 {
-			segmentSet := NewRuneSet(outputSegments[i])
-			for digit, set := range setsByNo {
-				if set.IsEqual(segmentSet) {
-					total += digit * multiplier
-					break
-				}
-			}
+			total += noBySet[NewRuneSet(outputSegments[i]).Freeze()] * multiplier
 		}
 	}
 
