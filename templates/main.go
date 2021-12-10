@@ -7,8 +7,22 @@ import (
 	"os"
 )
 
+func partTwo(input <-chan string, solutions chan<- string) {
+	defer close(solutions)
+
+	solutions <- fmt.Sprintf("Part 2")
+}
+
+func partOne(input <-chan string, solutions chan<- string) {
+	defer close(solutions)
+
+	solutions <- fmt.Sprintf("Part 1")
+}
+
 func main() {
 	parts := []func(<-chan string, chan<- string) {
+		partOne,
+		partTwo,
 	}
 
 	instructionsChannels := make([]chan string, len(parts))
