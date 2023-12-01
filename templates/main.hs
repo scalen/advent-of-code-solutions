@@ -7,10 +7,10 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    ['1', inputFilepath] -> do
+    ["1", inputFilepath] -> do
                               input <- readFile inputFilepath
                               print $ solve1 input
-    ['2', inputFilepath] -> do
+    ["2", inputFilepath] -> do
                               input <- readFile inputFilepath
                               print $ solve2 input
     [inputFilepath]      -> do
