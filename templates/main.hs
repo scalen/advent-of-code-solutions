@@ -6,7 +6,7 @@ instance Read Part where
   readsPrec _ "2" = [(Two, "")]
 
 solve :: Part -> String -> String
-solve _ _ = "Unsolved"
+solve _ = \_ -> "Unsolved"
 
 main :: IO ()
 main = do
