@@ -42,16 +42,26 @@ instance Read Game where
       parseSelections cs = case (parseSelection cs) of
                            (selection, remainder) -> selection:(parseSelections remainder)
 
+minimalKnownSet :: [Selection] -> Selection
+minimalKnownSet = minimalKnownSet' []
+  where
+    minimalKnownSet' acc []             = acc
+    minimalKnownSet' acc ([]:ss)        = minimalKnownSet' acc ss
+    minimalKnownSet' acc ((entry:s):ss) = minimalKnownSet' (maybeIncreaseMinimum entry acc) (s:ss)
+    maybeIncreaseMinimum entry [] = [entry]
+    maybeIncreaseMinimum (entryColour, entryCount) ((sColour, sCount):selection)
+      | entryColour == sColour    = (sColour, if entryCount > sCount then entryCount else sCount):selection
+      | otherwise                 = (sColour, sCount):(maybeIncreaseMinimum (entryColour, entryCount) selection)
+
 inLimits :: Selection -> Game -> Bool
 inLimits [] _                                            = False
 inLimits _ (Game {gameId=_, selections=[]})              = True
-inLimits limits (Game {gameId=_, selections=selections}) = not $ foldr (||) False $ map (findBiggerCount selections) limits
+inLimits limits (Game {gameId=_, selections=selections}) = not $ foldr (||) False $ map (hasBiggerCount (minimalKnownSet selections)) limits
   where
-    findBiggerCount [] _                      = False
-    findBiggerCount (((sColour, count):colours):selections) (lColour, maximum)
-      | sColour == lColour && count > maximum = True
-      | otherwise                             = findBiggerCount (colours:selections) (lColour, maximum)
-    findBiggerCount ([]:selections) limit     = findBiggerCount selections limit
+    hasBiggerCount [] _    = False
+    hasBiggerCount ((sColour, count):selection) (lColour, maximum)
+      | sColour == lColour = count > maximum
+      | otherwise          = hasBiggerCount selection (lColour, maximum)
 
 getPossibleGameId :: Selection -> Game -> Int
 getPossibleGameId limits game
@@ -64,8 +74,8 @@ instance Read Part where
   readsPrec _ "2" = [(Two, "")]
 
 solve :: Part -> String -> String
-solve One input = show $ sum $ map (getPossibleGameId [("red", 12), ("green", 13), ("blue", 14)]) $ map read $ lines input
-solve _ _ = "Unsolved"
+solve One = show . sum . (map (getPossibleGameId [("red", 12), ("green", 13), ("blue", 14)])) . (map read) . lines
+solve _ = \_ -> "Unsolved"
 
 main :: IO ()
 main = do
