@@ -77,6 +77,47 @@ getPartNumbersFromString input = getPartNumbers2D partLocations partNumbers
     partNumbers = map getPossibleEnginePartNumbersAndLocations splitLines
     splitLines = lines input
 
+-- Part 2
+
+getGearRatios1D :: [PartLocation] -> [[PartNumber]] -> [Int]
+getGearRatios1D partLocations []         = extractRatios partLocations
+  where
+    extractRatios []                                      = []
+    extractRatios ((_, Right (Just ratio)):partLocations) = ratio:extractRatios partLocations
+    extractRatios (_:partLocations)                       =       extractRatios partLocations
+getGearRatios1D partLocations (row:rows) = getGearRatios1D (foldl (updateGearStates) partLocations [partNo | partNo <- row]) rows
+  where
+    updateGearStates :: [PartLocation] -> PartNumber -> [PartLocation]
+    updateGearStates [] _ = []
+    updateGearStates ((loc, state):partLocations) (number, scope)
+      | elem loc scope    = case state of
+          Left Nothing          -> (loc, Left (Just (number *))):updateGearStates partLocations (number, scope)
+          Left (Just completer) -> (loc, Right (Just (completer number))):updateGearStates partLocations (number, scope)
+          _                     -> (loc, Right Nothing):updateGearStates partLocations (number, scope) -- If the part has already produced a result, it must have more that two adjacent part numbers, so we should move it to an invalid gear state
+      | otherwise         = (loc, state):updateGearStates partLocations (number, scope)
+
+getGearRatios2D :: [[PartLocation]] -> [[PartNumber]] -> [Int]
+getGearRatios2D = iterator []
+  where
+    iterator :: [[PartNumber]] -> [[PartLocation]] -> [[PartNumber]] -> [Int]
+    iterator [] _ []                            = []
+    iterator _ [] _                             = []
+    iterator [] plrs (row:rows)                 = iterator [[], [], row] plrs rows
+    iterator (_:previous) (pls:plrs) []         = getGearRatios1D pls previous
+    iterator (_:previous) (pls:plrs) (row:rows) = (getGearRatios1D pls next) ++ (iterator next plrs rows)
+      where
+        next = previous ++ [row]
+
+getGearRatiosFromString :: String -> [Int]
+getGearRatiosFromString "" = []
+getGearRatiosFromString input = getGearRatios2D partLocations partNumbers
+  where
+    partLocations = map (getEnginePartLocations isPart) splitLines
+    partNumbers = map getPossibleEnginePartNumbersAndLocations splitLines
+    splitLines = lines input
+
+-- Boiler plate and solution calls
+
 data Part = One | Two deriving (Show, Ord, Eq, Enum, Bounded)
 instance Read Part where
   readsPrec _ "1" = [(One, "")]
@@ -84,7 +125,7 @@ instance Read Part where
 
 solve :: Part -> String -> String
 solve One = show . sum . getPartNumbersFromString
-solve _ = \_ -> "Unsolved"
+solve Two = show . sum . getGearRatiosFromString
 
 main :: IO ()
 main = do
