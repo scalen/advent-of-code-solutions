@@ -1,7 +1,9 @@
 import System.Environment
 
-type PartLocation = Int
-type Scope = [PartLocation]
+-- General
+
+type PartLocation = (Int, Either (Maybe (Int -> Int)) (Maybe Int))
+type Scope = [Int]
 type PartNumber = (Int, Scope)
 
 isPart c = ('0' > c || c > '9') && c /= '.'
@@ -11,26 +13,28 @@ getEnginePartLocations = finder 0
   where
     finder _ _ "" = []
     finder index matcher (c:cs)
-      | matcher c = index:finder (index + 1) matcher cs
+      | matcher c = (index, Left Nothing):finder (index + 1) matcher cs
       | otherwise =       finder (index + 1) matcher cs
 
 getPossibleEnginePartNumbersAndLocations :: String -> [PartNumber]
 getPossibleEnginePartNumbersAndLocations = finder 0
   where
-    finder :: PartLocation -> String -> [PartNumber]
+    finder :: Int -> String -> [PartNumber]
     finder _ "" = []
     finder index (c:cs)
       | '0' <= c && c <= '9' = (read token, scope):finder lastIndex rest
       | otherwise            = finder (index + 1) cs
       where
         (token, scope, rest, lastIndex) = parser index (c:cs)
-    parser :: PartLocation -> String -> (String, Scope, String, PartLocation)
+    parser :: Int -> String -> (String, Scope, String, Int)
     parser index ""          = ("", [index - 1, index], "", index)
     parser index (c:cs)
       | '0' <= c && c <= '9' = (c:token, (index - 1):scope, rest, lastIndex)
       | otherwise            = ("", [index-1, index], c:cs, index)
       where
         (token, scope, rest, lastIndex) = parser (index + 1) cs
+
+-- Part 1
 
 getPartNumbers1D :: [PartLocation] -> [[PartNumber]] -> ([Int], [[PartNumber]])
 getPartNumbers1D partLocations []             = ([], [])
@@ -47,7 +51,7 @@ getPartNumbers1D partLocations (partNos:rows) = (poppedNumbers ++ recNumbers, re
         (numbers, remainingPartNos) = popNumbersForParts partLocations partNos
     partExistsInScope :: [PartLocation] -> Scope -> Bool
     partExistsInScope [] scope = False
-    partExistsInScope (loc:partLocations) scope
+    partExistsInScope ((loc, _):partLocations) scope
       | elem loc scope = True
       | otherwise      = partExistsInScope partLocations scope
 
