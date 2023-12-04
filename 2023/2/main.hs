@@ -68,6 +68,13 @@ getPossibleGameId limits game
   | inLimits limits game             = gameId game
   | otherwise                        = 0
 
+selectionPower :: Selection -> Int
+selectionPower [] = 0
+selectionPower selection = foldr (*) 1 [count | (_, count) <- selection]
+
+gamePower :: Game -> Int
+gamePower (Game {gameId=_, selections=selections}) = selectionPower $ minimalKnownSet selections
+
 data Part = One | Two deriving (Show, Ord, Eq, Enum, Bounded)
 instance Read Part where
   readsPrec _ "1" = [(One, "")]
@@ -75,6 +82,7 @@ instance Read Part where
 
 solve :: Part -> String -> String
 solve One = show . sum . (map (getPossibleGameId [("red", 12), ("green", 13), ("blue", 14)])) . (map read) . lines
+solve Two = show . sum . (map gamePower) . (map read) . lines
 solve _ = \_ -> "Unsolved"
 
 main :: IO ()
