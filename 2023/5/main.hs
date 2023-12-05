@@ -50,6 +50,8 @@ parseMaps (_:lines)  = map:parseMaps remainder
   where
     (map, remainder) = parseMap lines
 
+-- Part 1
+
 mapOnce :: Int -> Map -> Int
 mapOnce src []                    = src
 mapOnce src ((from, to, range):rest)
@@ -61,6 +63,42 @@ mapOnce src ((from, to, range):rest)
 processLinesToLocationsForSeeds :: [String] -> [Int]
 processLinesToLocationsForSeeds (line:lines) = map (\seed -> foldl mapOnce seed $ parseMaps lines) $ parseSeedList line
 
+-- Part 2
+
+type Range = (Start, Size)
+
+parseSeedRangeList :: String -> [Range]
+parseSeedRangeList = pairItems . parseSeedList
+  where
+    pairItems [] = []
+    pairItems (a:b:rest) = (a, b):pairItems rest
+
+mapRange :: Range -> Map -> [Range]
+mapRange src [] = [src]
+mapRange (srcStart, srcSize) ((from, to, mappingSize):rest)
+  | subsumes (from, mappingSize) (srcStart, srcSize) = [(to + offset, srcSize)]
+  | subsumes (srcStart, srcSize) (from, mappingSize) = mappedLowerRange ++ [(to, mappingSize)] ++ mappedHigherRange
+  | overlaps (srcStart, srcSize) from                = mappedLowerRange ++ [(to, mappingSize + offset)]
+  | overlaps (from, mappingSize) srcStart            = [(to + offset, srcSize - excess)] ++ mappedHigherRange
+  | otherwise                                        = mapRange (srcStart, srcSize) rest
+  where
+    offset = srcStart - from
+    excess = srcStart + srcSize - (from + mappingSize)
+    subsumes (outStart, outSize) (inStart, inSize)
+      | inStart + inSize >= outStart + outSize = False
+      | otherwise                              = inStart >= outStart
+    overlaps (lowerStart, lowerSize) target
+      | target > lowerStart = lowerStart + lowerSize >= target
+      | otherwise           = False
+    mappedLowerRange = mapRange (srcStart, (-offset)) rest
+    mappedHigherRange = mapRange (from + mappingSize, excess) rest
+
+processLinesToLocationsForSeedRanges :: [String] -> [Range]
+processLinesToLocationsForSeedRanges (line:lines) = foldl (++) [] $ map getLocationsForSeedRange $ parseSeedRangeList line
+  where
+    getLocationsForSeedRange range = foldl getLocationsForSeedRanges [range] $ parseMaps lines
+    getLocationsForSeedRanges ranges m = foldl (++) [] $ map (\r -> mapRange r m) ranges
+
 -- Boilerplate and solution entrypoints
 
 data Part = One | Two deriving (Show, Ord, Eq, Enum, Bounded)
@@ -70,6 +108,7 @@ instance Read Part where
 
 solve :: Part -> String -> String
 solve One = show . (foldl min maxBound) . processLinesToLocationsForSeeds . lines
+solve Two = show . (foldl min maxBound) . (map fst) . processLinesToLocationsForSeedRanges . lines
 solve _ = \_ -> "Unsolved"
 
 main :: IO ()
