@@ -39,8 +39,25 @@ parseCard ('C':'a':'r':'d':cs) = Card cardId winners gotNos
 getCardMatches :: Card -> Int
 getCardMatches (Card _ winners gotNos) = sum [1 | n <- gotNos, elem n winners]
 
+-- Part 1
+
 getCardPoints :: Card -> Int
 getCardPoints card = Bits.shift 1 $ (getCardMatches card) - 1
+
+-- Part 2
+
+getCardCounts :: [Card] -> [Int]
+getCardCounts = getCardCountsDoubling []
+  where
+    getCardCountsDoubling _ [] = []
+    getCardCountsDoubling doubles (c:cs) = noOfCard:(getCardCountsDoubling (nextDoubles) cs)
+      where
+        nextDoubles
+          | noOfMatches > 0 = decrementedDoubles ++ (take noOfCard $ repeat noOfMatches)
+          | otherwise       = decrementedDoubles
+        decrementedDoubles = [d' | d <- doubles, let d' = d - 1, d' > 0]
+        noOfMatches = getCardMatches c
+        noOfCard = (length doubles) + 1
 
 -- Boilerplate and solution entrypoints
 
@@ -51,6 +68,7 @@ instance Read Part where
 
 solve :: Part -> String -> String
 solve One = show . sum . (map (getCardPoints . parseCard)) . lines
+solve Two = show . sum . getCardCounts . (map parseCard) . lines
 solve _ = \_ -> "Unsolved"
 
 main :: IO ()
