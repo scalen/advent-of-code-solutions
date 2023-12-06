@@ -57,6 +57,23 @@ countPossibleNewRecords (length, record) = length - 1 - recordHoldFloor * 2
     -- N.B.: Int x - Ceiling (Float y) = Floor (Float x - Float y)
     recordHoldFloor = div (length - (ceiling $ sqrt $ fromIntegral $ length * length - 4 * record)) 2
 
+-- Part 2
+
+removeSpaces :: String -> String
+removeSpaces "" = ""
+removeSpaces (c:cs)
+  | c == ' '    =   removeSpaces cs
+  | otherwise   = c:removeSpaces cs
+
+parseTime :: String -> Time
+parseTime ('T':'i':'m':'e':':':cs) = fst $ parseNumber $ removeSpaces cs
+
+parseDistance :: String -> Distance
+parseDistance ('D':'i':'s':'t':'a':'n':'c':'e':':':cs) = fst $ parseNumber $ removeSpaces cs
+
+parseRaceRecord :: [String] -> RaceRecord
+parseRaceRecord [timeLine, distanceLine] = (parseTime timeLine, parseDistance distanceLine)
+
 -- Boilerplate
 
 data Part = One | Two deriving (Show, Ord, Eq, Enum, Bounded)
@@ -66,7 +83,7 @@ instance Read Part where
 
 solve :: Part -> String -> String
 solve One = show . (foldl (*) 1) . (map countPossibleNewRecords) . parseRaceRecords . lines
-solve Two = show . (map countPossibleNewRecords) . parseRaceRecords . lines
+solve Two = show .  countPossibleNewRecords . parseRaceRecord . lines
 solve _ = \_ -> "Unsolved"
 
 main :: IO ()
