@@ -23,7 +23,54 @@ parseNumber line = (read numberStr, remainder)
 -- Day
 
 type Bid = Int
-data Card = Tw | Three | Four | Five | Six | Seven | Eight | Nine | Ten | Jack | Queen | King | Ace deriving (Show, Read, Eq, Ord, Enum, Bounded)
+data Card = Joker | Tw | Three | Four | Five | Six | Seven | Eight | Nine | Ten | Jack | Queen | King | Ace deriving (Show, Read, Eq, Ord, Enum, Bounded)
+
+data HandType = EmptyHand | HighCard Card | OnePair Card | TwoPair Card Card | ThreeOfAKind Card | FullHouse Card Card | FourOfAKind Card | FiveOfAKind Card
+instance Eq HandType where
+  EmptyHand        == EmptyHand        = True
+  (HighCard _)     == (HighCard _)     = True
+  (OnePair _)      == (OnePair _)      = True
+  (TwoPair _ _)    == (TwoPair _ _)    = True
+  (ThreeOfAKind _) == (ThreeOfAKind _) = True
+  (FullHouse _ _)  == (FullHouse _ _)  = True
+  (FourOfAKind _)  == (FourOfAKind _)  = True
+  (FiveOfAKind _)  == (FiveOfAKind _)  = True
+  _                == _                = False
+instance Ord HandType where
+  EmptyHand        <= _                = True
+  _                <= EmptyHand        = False
+  (HighCard _)     <= _                = True
+  _                <= (HighCard _)     = False
+  (OnePair _)      <= _                = True
+  _                <= (OnePair _)      = False
+  (TwoPair _ _)    <= _                = True
+  _                <= (TwoPair _ _)    = False
+  (ThreeOfAKind _) <= _                = True
+  _                <= (ThreeOfAKind _) = False
+  (FullHouse _ _)  <= _                = True
+  _                <= (FullHouse _ _)  = False
+  (FourOfAKind _)  <= _                = True
+  _                <= (FourOfAKind _)  = False
+  (FiveOfAKind _)  <= _                = True
+type Hand = (HandType, [Card])
+type Play = (Hand, Bid)
+
+parsePlay :: (String -> ([Card], String)) -> ([Card] -> HandType) -> String -> Play
+parsePlay parseCards determineHandType line = ((determineHandType cards, cards), fst $ parseNumber remainder)
+  where
+    (cards, remainder) = parseCards line
+
+type Rank = Int
+
+rankPlays :: [Play] -> [(Rank, Bid)]
+rankPlays = (rank 1) . (List.sortBy beats)
+  where
+    rank _ []               = []
+    rank r ((_, bid):plays) = (r, bid):rank (r+1) plays
+    beats (hand1, _) (hand2, _) = compare hand1 hand2
+
+scoreRankedPlay :: (Rank, Bid) -> Int
+scoreRankedPlay (rank, bid) = rank * bid
 
 parseCards :: String -> ([Card], String)
 parseCards line = (readCards token, remainder)
@@ -44,42 +91,20 @@ parseCards line = (readCards token, remainder)
     readCards ('3':rest) = Three:readCards rest
     readCards ('2':rest) = Tw   :readCards rest
 
-data HandType = HighCard Card | OnePair Card | TwoPair Card Card | ThreeOfAKind Card | FullHouse Card Card | FourOfAKind Card | FiveOfAKind Card
-instance Eq HandType where
-  (HighCard _)     == (HighCard _)     = True
-  (OnePair _)      == (OnePair _)      = True
-  (TwoPair _ _)    == (TwoPair _ _)    = True
-  (ThreeOfAKind _) == (ThreeOfAKind _) = True
-  (FullHouse _ _)  == (FullHouse _ _)  = True
-  (FourOfAKind _)  == (FourOfAKind _)  = True
-  (FiveOfAKind _)  == (FiveOfAKind _)  = True
-  _                == _                = False
-instance Ord HandType where
-  (HighCard _)     <= _                = True
-  _                <= (HighCard _)     = False
-  (OnePair _)      <= _                = True
-  _                <= (OnePair _)      = False
-  (TwoPair _ _)    <= _                = True
-  _                <= (TwoPair _ _)    = False
-  (ThreeOfAKind _) <= _                = True
-  _                <= (ThreeOfAKind _) = False
-  (FullHouse _ _)  <= _                = True
-  _                <= (FullHouse _ _)  = False
-  (FourOfAKind _)  <= _                = True
-  _                <= (FourOfAKind _)  = False
-  (FiveOfAKind _)  <= _                = True
-type Hand = (HandType, [Card])
-type Play = (Hand, Bid)
-
 determineHandType :: [Card] -> HandType
-determineHandType = recurse (HighCard minBound)
+determineHandType = recurse EmptyHand
   where
     recurse :: HandType -> [Card] -> HandType
-    recurse (HighCard h) (c:cs)
+    recurse EmptyHand (c:cs)
       | length (filter (c ==) cs) == 1 = recurse (OnePair c) (filter (c /=) cs)
       | length (filter (c ==) cs) == 2 = recurse (ThreeOfAKind c) (filter (c /=) cs)
       | length (filter (c ==) cs) == 3 = FourOfAKind c
       | length (filter (c ==) cs) == 4 = FiveOfAKind c
+      | otherwise                      = recurse (HighCard c) cs
+    recurse (HighCard h) (c:cs)
+      | length (filter (c ==) cs) == 1 = recurse (OnePair c) (filter (c /=) cs)
+      | length (filter (c ==) cs) == 2 = recurse (ThreeOfAKind c) (filter (c /=) cs)
+      | length (filter (c ==) cs) == 3 = FourOfAKind c
       | c > h                          = recurse (HighCard c) cs
       | otherwise                      = recurse (HighCard h) cs
     recurse (OnePair p) (c:cs)
@@ -91,23 +116,6 @@ determineHandType = recurse (HighCard minBound)
       | otherwise                      = ThreeOfAKind t
     recurse acc _                      = acc
 
-parsePlay :: String -> Play
-parsePlay line = ((determineHandType cards, cards), fst $ parseNumber remainder)
-  where
-    (cards, remainder) = parseCards line
-
-type Rank = Int
-
-rankPlays :: [Play] -> [(Rank, Bid)]
-rankPlays = (rank 1) . (List.sortBy beats)
-  where
-    rank _ []               = []
-    rank r ((_, bid):plays) = (r, bid):rank (r+1) plays
-    beats (hand1, _) (hand2, _) = compare hand1 hand2
-
-scoreRankedPlay :: (Rank, Bid) -> Int
-scoreRankedPlay (rank, bid) = rank * bid
-
 -- Boilerplate and solution entrypoints
 
 data Part = One | Two deriving (Show, Ord, Eq, Enum, Bounded)
@@ -116,7 +124,7 @@ instance Read Part where
   readsPrec _ "2" = [(Two, "")]
 
 solve :: Part -> String -> String
-solve One = show . sum . (map scoreRankedPlay) . rankPlays . (map parsePlay) . lines
+solve One = show . sum . (map scoreRankedPlay) . rankPlays . (map (parsePlay parseCards determineHandType)) . lines
 solve _ = \_ -> "Unsolved"
 
 main :: IO ()
