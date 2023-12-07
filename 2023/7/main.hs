@@ -72,6 +72,8 @@ rankPlays = (rank 1) . (List.sortBy beats)
 scoreRankedPlay :: (Rank, Bid) -> Int
 scoreRankedPlay (rank, bid) = rank * bid
 
+-- Part 1
+
 parseCards :: String -> ([Card], String)
 parseCards line = (readCards token, remainder)
   where
@@ -116,6 +118,71 @@ determineHandType = recurse EmptyHand
       | otherwise                      = ThreeOfAKind t
     recurse acc _                      = acc
 
+-- Part 2
+
+parseCardsWithJoker :: String -> ([Card], String)
+parseCardsWithJoker line = (readCards token, remainder)
+  where
+    (token, remainder) = parseToken (\c -> elem c "AKQT98765432J") line
+    readCards ""         = []
+    readCards ('A':rest) = Ace  :readCards rest
+    readCards ('K':rest) = King :readCards rest
+    readCards ('Q':rest) = Queen:readCards rest
+    readCards ('T':rest) = Ten  :readCards rest
+    readCards ('9':rest) = Nine :readCards rest
+    readCards ('8':rest) = Eight:readCards rest
+    readCards ('7':rest) = Seven:readCards rest
+    readCards ('6':rest) = Six  :readCards rest
+    readCards ('5':rest) = Five :readCards rest
+    readCards ('4':rest) = Four :readCards rest
+    readCards ('3':rest) = Three:readCards rest
+    readCards ('2':rest) = Tw   :readCards rest
+    readCards ('J':rest) = Joker:readCards rest
+
+determineHandTypeWithJoker :: [Card] -> HandType
+determineHandTypeWithJoker = recurse EmptyHand 0
+  where
+    recurse :: HandType -> Int -> [Card] -> HandType
+    recurse acc              0      []         = acc
+    recurse EmptyHand        5      []         = FiveOfAKind Joker
+    recurse (HighCard h)     jokers []         = case jokers of
+                                                   1 -> OnePair h
+                                                   2 -> ThreeOfAKind h
+                                                   3 -> FourOfAKind h
+                                                   4 -> FiveOfAKind h
+    recurse (OnePair h)      jokers []         = case jokers of
+                                                   1 -> ThreeOfAKind h
+                                                   2 -> FourOfAKind h
+                                                   3 -> FiveOfAKind h
+    recurse (TwoPair h l)    jokers []         = case jokers of
+                                                   1 -> FullHouse h l
+    recurse (ThreeOfAKind h) jokers []         = case jokers of
+                                                   1 -> FourOfAKind h
+                                                   2 -> FiveOfAKind h
+    recurse (FourOfAKind h)  jokers []         = case jokers of
+                                                   1 -> FiveOfAKind h
+    recurse acc              jokers (Joker:cs) = recurse acc (jokers + 1) cs
+    recurse EmptyHand        jokers (c:cs)
+      | length (filter (c ==) cs) == 1         = recurse (OnePair c) jokers (filter (c /=) cs)
+      | length (filter (c ==) cs) == 2         = recurse (ThreeOfAKind c) jokers (filter (c /=) cs)
+      | length (filter (c ==) cs) == 3         = recurse (FourOfAKind c) jokers cs
+      | length (filter (c ==) cs) == 4         = FiveOfAKind c
+      | otherwise                              = recurse (HighCard c) jokers cs
+    recurse (HighCard h)     jokers (c:cs)
+      | length (filter (c ==) cs) == 1         = recurse (OnePair c) jokers (filter (c /=) cs)
+      | length (filter (c ==) cs) == 2         = recurse (ThreeOfAKind c) jokers (filter (c /=) cs)
+      | length (filter (c ==) cs) == 3         = FourOfAKind c
+      | c > h                                  = recurse (HighCard c) jokers cs
+      | otherwise                              = recurse (HighCard h) jokers cs
+    recurse (OnePair p)      jokers (c:cs)
+      | length (filter (c ==) cs) == 1         = recurse (TwoPair p c) jokers cs
+      | length (filter (c ==) cs) == 2         = FullHouse c p
+      | otherwise                              = recurse (OnePair p) jokers cs
+    recurse (ThreeOfAKind t) jokers (c:cs)
+      | length (filter (c ==) cs) == 1         = FullHouse t c
+      | otherwise                              = recurse (ThreeOfAKind t) jokers cs
+    recurse acc              jokers (c:cs)     = recurse acc jokers cs
+
 -- Boilerplate and solution entrypoints
 
 data Part = One | Two deriving (Show, Ord, Eq, Enum, Bounded)
@@ -125,6 +192,7 @@ instance Read Part where
 
 solve :: Part -> String -> String
 solve One = show . sum . (map scoreRankedPlay) . rankPlays . (map (parsePlay parseCards determineHandType)) . lines
+solve Two = show . sum . (map scoreRankedPlay) . rankPlays . (map (parsePlay parseCardsWithJoker determineHandTypeWithJoker)) . lines
 solve _ = \_ -> "Unsolved"
 
 main :: IO ()
