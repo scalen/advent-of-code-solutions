@@ -94,10 +94,10 @@ mapRange (srcStart, srcSize) ((from, to, mappingSize):rest)
     mappedHigherRange = mapRange (from + mappingSize, excess) rest
 
 processLinesToLocationsForSeedRanges :: [String] -> [Range]
-processLinesToLocationsForSeedRanges (line:lines) = foldl (++) [] $ map getLocationsForSeedRange $ parseSeedRangeList line
+processLinesToLocationsForSeedRanges (line:lines) = foldl getLocationsForSeedRanges (parseSeedRangeList line) $ parseMaps lines
   where
-    getLocationsForSeedRange range = foldl getLocationsForSeedRanges [range] $ parseMaps lines
-    getLocationsForSeedRanges ranges m = foldl (++) [] $ map (\r -> mapRange r m) ranges
+    getLocationsForSeedRanges ranges m = foldl (++) [] $ map (mapRange' m) ranges
+    mapRange' m range = mapRange range m
 
 -- Boilerplate and solution entrypoints
 
