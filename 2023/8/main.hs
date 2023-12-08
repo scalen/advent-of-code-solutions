@@ -39,6 +39,8 @@ parseInstructions = cycle . parse
     parse ('L':cs) = fst:parse cs
     parse ('R':cs) = snd:parse cs
 
+-- Part 1
+
 journeyLengthFromTo :: Graph -> [Instruction] -> Label -> Label -> Int
 journeyLengthFromTo = takeStep 0
   where
@@ -52,6 +54,22 @@ prepareJourney from to (instructionStr:_:graphStrs) = journeyLengthFromTo graph 
     graph = Map.fromList $ map parseNode graphStrs
     instructions = parseInstructions instructionStr
 
+-- Part 2
+
+ghostJourneyLengthFromTo :: Graph -> [Instruction] -> Char -> Char -> Int
+ghostJourneyLengthFromTo graph instructions fromChar toChar = takeSteps 0 graph instructions [label | label <- Map.keys graph, (last label) == fromChar] toChar
+  where
+    takeSteps :: Int -> Graph -> [Instruction] -> [String] -> Char -> Int
+    takeSteps steps graph (choose:choices) from toChar
+      | all ((== toChar) . last) from = steps
+      | otherwise                     = takeSteps (steps+1) graph choices (map (choose . (graph Map.!)) from) toChar
+
+prepareGhostJourney :: Char -> Char -> [String] -> Int
+prepareGhostJourney from to (instructionStr:_:graphStrs) = ghostJourneyLengthFromTo graph instructions from to
+  where
+    graph = Map.fromList $ map parseNode graphStrs
+    instructions = parseInstructions instructionStr
+
 -- Boilerplate and solution entrypoints
 
 data Part = One | Two deriving (Show, Ord, Eq, Enum, Bounded)
@@ -61,6 +79,7 @@ instance Read Part where
 
 solve :: Part -> String -> String
 solve One = show . (prepareJourney "AAA" "ZZZ") . lines
+solve Two = show . (prepareGhostJourney 'A' 'Z') . lines
 solve _ = \_ -> "Unsolved"
 
 main :: IO ()
