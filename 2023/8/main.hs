@@ -1,4 +1,5 @@
 import System.Environment
+import qualified Data.List as List
 import qualified Data.Map as Map
 
 type Label = String
@@ -55,13 +56,33 @@ prepareJourney from to (instructionStr:_:graphStrs) = fst $ recursiveJourney fro
 
 -- Part 2
 
-ghostJourneyLengthFromTo :: Graph -> [Instruction] -> Char -> Char -> Int
-ghostJourneyLengthFromTo graph instructions fromChar toChar = takeSteps 0 graph instructions [label | label <- Map.keys graph, (last label) == fromChar] toChar
+memoizeJourneyWalker :: [Label] -> Int -> (Label -> Int -> (Int, Label)) -> (Label -> Int -> (Int, Label))
+memoizeJourneyWalker labels limit f = getJourneyFor
   where
-    takeSteps :: Int -> Graph -> [Instruction] -> [String] -> Char -> Int
-    takeSteps steps graph (choose:choices) from toChar
-      | all ((== toChar) . last) from = steps
-      | otherwise                     = takeSteps (steps+1) graph choices (map (choose . (graph Map.!)) from) toChar
+    getJourneyFor l i
+      | i < limit  = (journeys Map.! l) !! i
+      | i >= limit = (((div i limit) * limit) + length, to)
+      where
+        (length, to) = (journeys Map.! l) !! (mod i limit)
+    journeys = Map.fromList [(label, map (f label) [0..limit]) | label <- labels]
+
+memoizedJourneyLengthFrom :: Graph -> [Instruction] -> [Label] -> (Label -> Int -> (Int, Label))
+memoizedJourneyLengthFrom graph instructions tos = (\f -> let {y = f y} in y) (memoize . preparedJourneyWalker)
+  where
+    memoize = memoizeJourneyWalker (Map.keys graph) (length instructions)
+    preparedJourneyWalker = journeyLengthFromTo graph instructions tos
+
+ghostJourneyLengthFromTo :: Graph -> [Instruction] -> Char -> Char -> Int
+ghostJourneyLengthFromTo graph instructions fromChar toChar = shortestCommonLength froms
+  where
+    getJourneyLength = memoizedJourneyLengthFrom graph instructions tos
+    tos              = [label      | label <- Map.keys graph, (last label) == toChar]
+    froms            = [(0, label) | label <- Map.keys graph, (last label) == fromChar]
+    shortestCommonLength ((lengthSoFar, from):furtherFroms)
+      | success   = lengthSoFar
+      | otherwise = shortestCommonLength $ List.sort $ (getJourneyLength from lengthSoFar):furtherFroms
+      where
+        success = all ((lengthSoFar ==) . fst) furtherFroms && lengthSoFar > 0
 
 prepareGhostJourney :: Char -> Char -> [String] -> Int
 prepareGhostJourney from to (instructionStr:_:graphStrs) = ghostJourneyLengthFromTo graph instructions from to
