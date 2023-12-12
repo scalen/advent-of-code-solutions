@@ -33,24 +33,23 @@ parseNode line = (label, parseDestinations destinationsStr)
         parseRightDest (',':rdestStr) = fst $ parseLabel $ swallowSpace rdestStr
 
 parseInstructions :: String -> [Instruction]
-parseInstructions = cycle . parse
-  where
-    parse ""       = []
-    parse ('L':cs) = fst:parse cs
-    parse ('R':cs) = snd:parse cs
+parseInstructions ""       = []
+parseInstructions ('L':cs) = fst:parseInstructions cs
+parseInstructions ('R':cs) = snd:parseInstructions cs
 
 -- Part 1
 
-journeyLengthFromTo :: Graph -> [Instruction] -> Label -> Label -> Int
-journeyLengthFromTo = takeStep 0
+journeyLengthFromTo :: Graph -> [Instruction] -> [Label] -> (Label -> Int -> (Int, Label)) -> Label -> Int -> (Int, Label)
+journeyLengthFromTo graph choices tos recurse from steps
+  | elem from tos = (steps, from)
+  | otherwise     = recurse (choose $ graph Map.! from) (steps + 1)
   where
-    takeStep steps graph (choose:choices) from to
-      | from == to = steps
-      | otherwise  = takeStep (steps+1) graph choices (choose $ graph Map.! from) to
+    (choose:_) = drop (mod steps $ length choices) choices
 
 prepareJourney :: Label -> Label -> [String] -> Int
-prepareJourney from to (instructionStr:_:graphStrs) = journeyLengthFromTo graph instructions from to
+prepareJourney from to (instructionStr:_:graphStrs) = fst $ recursiveJourney from 0
   where
+    recursiveJourney = (\f -> let {y = f y} in y) (journeyLengthFromTo graph instructions [to])
     graph = Map.fromList $ map parseNode graphStrs
     instructions = parseInstructions instructionStr
 
