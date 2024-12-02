@@ -11,6 +11,7 @@ namespace _2024.Controllers
         {
             None = 0,
             One = 1,
+            Two = 2,
         }
 
         private static string[] newlines = new string[] { "\r\n", "\r", "\n" };
@@ -24,7 +25,7 @@ namespace _2024.Controllers
 
         [Consumes(MediaTypeNames.Text.Plain)]
         [HttpPost("{part}")]
-        public ActionResult<Distance> Post([FromBody] string locationIds, [FromRoute] Part part)
+        public ActionResult<Difference> Post([FromBody] string locationIds, [FromRoute] Part part)
         {
             if (part == Part.None) return NotFound();
 
@@ -36,19 +37,38 @@ namespace _2024.Controllers
                 group1 = group1.Append(int.Parse(ids[0]));
                 group2 = group2.Append(int.Parse(ids[1]));
             }
-            if (part == Part.One) return new Distance
+            if (part == Part.One) return new Difference
             {
-                Total = group1
+                Distance = group1
                         .Order()
                         .Zip(group2.Order(), static (int x, int y) => Math.Abs(x - y))
                         .Sum(),
             };
-            else return NotFound();
+            else
+            {
+                Dictionary<int, int> similarityCache = new Dictionary<int, int>();
+                int similarity = 0;
+                foreach (var entry in group1)
+                {
+                    int entrySimilarity = -1;
+                    if (!similarityCache.TryGetValue(entry, out entrySimilarity))
+                    {
+                        entrySimilarity = group2.Where((other) => other == entry).Sum();
+                        similarityCache.Add(entry, entrySimilarity);
+                    }
+                    similarity += entrySimilarity;
+                }
+                return new Difference
+                {
+                    Similarity = similarity,
+                };
+            }
         }
     }
 
-    public class Distance
+    public class Difference
     {
-        public int Total { get; set; }
+        public int Distance { get; set; }
+        public int Similarity { get; set; }
     }
 }
