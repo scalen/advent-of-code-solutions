@@ -1,4 +1,5 @@
 using System.Net.Mime;
+using _2024.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace _2024.Controllers
@@ -7,13 +8,6 @@ namespace _2024.Controllers
     [Route("[controller]")]
     public class Day1 : ControllerBase
     {
-        public enum Part
-        {
-            None = 0,
-            One = 1,
-            Two = 2,
-        }
-
         private static string[] newlines = new string[] { "\r\n", "\r", "\n" };
 
         private readonly ILogger<Day1> _logger;
