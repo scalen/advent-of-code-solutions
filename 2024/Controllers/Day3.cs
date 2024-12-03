@@ -9,6 +9,9 @@ namespace _2024.Controllers
     [Route("[controller]")]
     public partial class Day3 : ControllerBase
     {
+        private static readonly string[] donts = ["don't()"];
+        private static readonly string[] dos = ["do()"];
+
         private int SumUncorruptedMultiplys(string program)
         {
             return MulApplication()
@@ -27,7 +30,16 @@ namespace _2024.Controllers
             {
                 UncorruptedTotal = SumUncorruptedMultiplys(program),
             };
-            else return NotFound();
+            else return new MultiplierProgramResult
+            {
+                UncorruptedTotal = program
+                                   .Split(dos, StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(doBlock => SumUncorruptedMultiplys(
+                                       doBlock
+                                       .Split(donts, StringSplitOptions.RemoveEmptyEntries)
+                                       .First()
+                                   )).Sum(),
+            };
         }
 
         [GeneratedRegex("mul[(](?<arg1>0|[1-9][0-9]?[0-9]?),(?<arg2>0|[1-9][0-9]?[0-9]?)[)]", RegexOptions.Multiline & RegexOptions.ExplicitCapture)]
