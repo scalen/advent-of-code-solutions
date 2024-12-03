@@ -18,24 +18,37 @@ namespace _2024.Controllers
 
         private static readonly string[] newlines = ["\r\n", "\r", "\n"];
 
-        private static int UnsafeAtIndex(int prev, IEnumerable<int> remaining, bool increasing, int index = 1)
+        private static int UnsafeAtIndex(int prev, IEnumerable<int> remaining, bool increasing, bool dampnerActive, int index = 1)
         {
             int current = remaining.FirstOrDefault(-1);
             if (current == -1) return -1;
 
             int difference = increasing ? current - prev : prev - current;
-            if (3 < difference || difference < 1) return index;
+            if (3 < difference || difference < 1)
+            {
+                if (dampnerActive && UnsafeAtIndex(prev, remaining.Skip(1), increasing, false, index + 1) < 0) return -1;
+                else return index;
+            }
             return UnsafeAtIndex(current, remaining.Skip(1), increasing, dampnerActive, index + 1);
         }
 
-        private static bool IsSafe(IEnumerable<int> levels)
+        private static bool IsSafe(IEnumerable<int> levels, Part part = Part.One)
         {
             int first = levels.First();
             IEnumerable<int> remaining = levels.Skip(1);
             bool increasing = remaining.First() > first;
+            bool dampnerActive = part == Part.Two;
             int unsafeAtIndex = UnsafeAtIndex(first, remaining, increasing, dampnerActive);
 
             if (unsafeAtIndex < 0) return true;
+            if (!dampnerActive) return false;
+            if (unsafeAtIndex < 3)
+            {
+                if (IsSafe(remaining)) return true;
+                remaining = remaining.Skip(1);
+                increasing = remaining.First() > first;
+                return UnsafeAtIndex(first, remaining, increasing, false) < 0;
+            }
             return false;
         }
 
@@ -54,7 +67,7 @@ namespace _2024.Controllers
                                .Where(static (string element) => element != "")
                                .Select(s => int.Parse(s))
                                .ToArray();
-                if (IsSafe(levels)) safeReports++;
+                if (IsSafe(levels, part)) safeReports++;
                 else _logger.LogInformation("Unsafe: {line}", line);
             }
             return new Safety
