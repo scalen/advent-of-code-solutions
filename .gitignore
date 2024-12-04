@@ -1,4 +1,9 @@
 *input.txt
+example*.txt
+*.http
+*.o
+*.hi
+
 solution
 .vs
 bin
