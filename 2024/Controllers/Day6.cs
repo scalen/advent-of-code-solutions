@@ -30,7 +30,7 @@ namespace _2024.Controllers
             public char Symbol { get; private set; } = symbol;
 
             public int VisitedLocationCount { get; private set; } = 1;
-            public bool Step(char[,] map)
+            public bool Step(char[,] map, bool markPath)
             {
                 var start = Location.Copy();
                 if (Heading.X != null) Location.X += (bool)Heading.X ? -1 : 1;
@@ -59,11 +59,10 @@ namespace _2024.Controllers
 
                 if (!guardMarkers.Contains(map[Location.X, Location.Y]))
                 {
-                    map[Location.X, Location.Y] = Symbol;
+                    if (markPath) map[Location.X, Location.Y] = Symbol;
                     ++VisitedLocationCount;
-                    return true;
                 }
-                return true;
+                return Step(map, markPath);
             }
         }
 
@@ -73,17 +72,23 @@ namespace _2024.Controllers
         {
             if (part == Part.None) return NotFound();
 
+            bool markPath = part == Part.One;
+
             string[] lines = input.Split(newlines, StringSplitOptions.TrimEntries).ToArray();
             char[,] map = new char[lines[0].Length, lines.Length];
 
             Guard? guard = null;
             for (int x = 0; x < map.GetLength(0); x++) for (int y = 0; y < map.GetLength(1); y++)
             {
-                map[x, y] = lines[y][x];
-                if (guardMarkers.Contains(map[x, y])) guard = new Guard(x, y, map[x, y]);
+                if (guardMarkers.Contains(map[x, y]))
+                {
+                    guard = new Guard(x, y, map[x, y]);
+                    if (markPath) map[x, y] = lines[y][x];
+                }
+                else map[x, y] = lines[y][x];
             }
             if (guard == null) return NotFound();
-            while (guard.Step(map)) ;
+            while (guard.Step(map, markPath)) ;
 
             var mapView = new StringBuilder(map.GetLength(0) * map.GetLength(1));
             for (int y = 0; y < map.GetLength(1); y++) mapView.Append(Enumerable.Range(0, map.GetLength(0)).Select(x => map[x, y]).ToArray()).AppendLine();
