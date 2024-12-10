@@ -22,14 +22,14 @@ namespace _2024.Controllers
 
         private class Guard(int x, int y, char symbol)
         {
-            private Coordinates<bool?> Heading { get; set; } = symbol == '^' ? new(null, true) :
-                                                               symbol == 'v' ? new(null, false) :
-                                                               symbol == '>' ? new(true, null) :
-                                                               new(false, null);
-            private Coordinates<int> Location { get; set; } = new(x, y);
-            private char Symbol = symbol;
+            public Coordinates<bool?> Heading { get; private set; } = symbol == '^' ? new(null, true) :
+                                                                      symbol == 'v' ? new(null, false) :
+                                                                      symbol == '>' ? new(true, null) :
+                                                                      new(false, null);
+            public Coordinates<int> Location { get; private set; } = new(x, y);
+            public char Symbol { get; private set; } = symbol;
 
-            private int VisitedLocationCount = 1;
+            public int VisitedLocationCount { get; private set; } = 1;
             public bool Step(char[,] map)
             {
                 var start = Location.Copy();
@@ -65,8 +65,6 @@ namespace _2024.Controllers
                 }
                 return true;
             }
-
-            public int GetVisitedLocationCount() => VisitedLocationCount;
         }
 
         [Consumes(MediaTypeNames.Text.Plain)]
@@ -92,7 +90,7 @@ namespace _2024.Controllers
             _logger.LogInformation("{}", mapView.ToString());
             return new MapResult
             {
-                VisitedLocationCount = guard == null ? 0 : guard.GetVisitedLocationCount(),
+                VisitedLocationCount = guard == null ? 0 : guard.VisitedLocationCount,
             };
         }
     }
